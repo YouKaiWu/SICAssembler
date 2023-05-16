@@ -165,7 +165,7 @@ public class Assembler {
             String opCode = getOpcode(line, false);
             if (opCode.equals("END")) {
                 String programLength = Integer.toHexString(locCtr - startingAddress).toUpperCase();
-                content.append("program length:" + programLength);
+                content.append("program length: " + programLength);
                 continue;
             }
 
@@ -198,13 +198,14 @@ public class Assembler {
     }
 
     public static String padWithZero(String str) {
-        String paddedString = String.format("%06d", Integer.parseInt(str));
-        return paddedString;
+        while (str.length() < 6)
+            str = "0" + str;
+        return str;
     }
 
     public static StringBuilder writeHeaderRecord(String programName, String startingAddress, String programLength) {
         StringBuilder content = new StringBuilder("");
-        content.append("H" + programName + "  " + padWithZero(startingAddress) + padWithZero(programLength));
+        content.append("H" + programName + "  " + padWithZero(startingAddress) + padWithZero(programLength) + '\n');
         return content;
     }
 
@@ -218,7 +219,7 @@ public class Assembler {
             locCtr = Integer.parseInt(getOperand(firstLine, true), 16);
             hasStartLabel = true;
             String loc = Integer.toHexString(locCtr).toUpperCase();
-            objectProgram.append(writeHeaderRecord(getLabel(firstLine, true), loc, getOperand(lastLine, true)));
+            objectProgram.append(writeHeaderRecord(getLabel(firstLine, true), loc, getOperand(lastLine, false)));
         }
         int startingAddress = locCtr;
         StringBuilder content = new StringBuilder("");
