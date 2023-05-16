@@ -72,36 +72,55 @@ public class Assembler {
 
     public static void main(String[] args) {
         passOne(FileManage.load(args[0]));
-        passTwo(FileManage.load(args[0]));
+        passTwo(FileManage.load("intermediateFile.txt"));
     }
 
     public static boolean isComment(String[] line) {
         return line[0].equals(".");
     }
 
-    public static boolean hasLabel(String[] line) {
-        if (line.length > 2)
-            return true;
-        return false;
+    public static boolean hasLabel(String[] line, boolean hasLoc) {
+        if (hasLoc)
+            return line.length > 3;
+        return line.length > 2;
     }
 
-    public static String getLabel(String[] line) {
-        if (hasLabel(line))
-            return line[0];
+    public static String getLabel(String[] line, boolean hasLoc) {
+        if (hasLabel(line, hasLoc)) {
+            if (hasLoc)
+                return line[1];
+            else
+                return line[0];
+        }
         return "";
     }
 
-    public static String getOpcode(String[] line) {
-        if (hasLabel(line))
+    public static String getOpcode(String[] line, boolean hasLoc) {
+        if (hasLabel(line, hasLoc)) {
+            if (hasLoc)
+                return line[2];
+            else
+                return line[1];
+        }
+        if (hasLoc)
             return line[1];
         return line[0];
     }
 
-    public static String getOperand(String[] line) {
-        if (hasLabel(line))
+    public static String getOperand(String[] line, boolean hasLoc) {
+        if (hasLabel(line, hasLoc)) {
+            if (hasLoc) {
+                if (line.length == 2)
+                    return "";
+                return line[3];
+            } else {
+                if (line.length == 1)
+                    return "";
+                return line[2];
+            }
+        }
+        if (hasLoc)
             return line[2];
-        if (line.length == 1)
-            return "";
         return line[1];
     }
 
@@ -113,8 +132,8 @@ public class Assembler {
         String[] firstLine = sourceCode.get(0).trim().split("\\s+");
         int locCtr = 0;
         boolean hasStartLabel = false;
-        if (getOpcode(firstLine).equals("START")) {
-            locCtr = Integer.parseInt(getOperand(firstLine), 16);
+        if (getOpcode(firstLine, false).equals("START")) {
+            locCtr = Integer.parseInt(getOperand(firstLine, false), 16);
             hasStartLabel = true;
         }
         int startingAddress = locCtr;
@@ -134,8 +153,8 @@ public class Assembler {
                 continue;
             }
 
-            if (hasLabel(line)) {
-                String label = getLabel(line);
+            if (hasLabel(line, false)) {
+                String label = getLabel(line, false);
                 if (symTab.containsKey(label)) {
                     setErrorFlag("duplicate symbol");
                 } else {
@@ -143,7 +162,7 @@ public class Assembler {
                 }
             }
 
-            String opCode = getOpcode(line);
+            String opCode = getOpcode(line, false);
             if (opCode.equals("END")) {
                 String programLength = Integer.toHexString(locCtr - startingAddress).toUpperCase();
                 content.append("program length:" + programLength);
@@ -155,13 +174,13 @@ public class Assembler {
             } else if (opCode.equals("WORD")) {
                 locCtr += 3;
             } else if (opCode.equals("RESW")) {
-                int operand = Integer.parseInt(getOperand(line));
+                int operand = Integer.parseInt(getOperand(line, false));
                 locCtr += 3 * operand;
             } else if (opCode.equals("RESB")) {
-                int operand = Integer.parseInt(getOperand(line));
+                int operand = Integer.parseInt(getOperand(line, false));
                 locCtr += operand;
             } else if (opCode.equals("BYTE")) {
-                String operand = getOperand(line);
+                String operand = getOperand(line, false);
                 int chLen = operand.length() - 3;
 
                 if (operand.charAt(0) == 'C') {
@@ -178,9 +197,14 @@ public class Assembler {
         FileManage.save("intermediateFile.txt", content.toString());
     }
 
+    public static String padWithZero(String str) {
+        String paddedString = String.format("%06d", Integer.parseInt(str));
+        return paddedString;
+    }
+
     public static StringBuilder writeHeaderRecord(String programName, String startingAddress, String programLength) {
         StringBuilder content = new StringBuilder("");
-        content.append("H" + programName + "  " + startingAddress + programLength);
+        content.append("H" + programName + "  " + padWithZero(startingAddress) + padWithZero(programLength));
         return content;
     }
 
@@ -189,15 +213,15 @@ public class Assembler {
         String[] lastLine = intermediateFile.get(intermediateFile.size() - 1).trim().split("\\s+");
         int locCtr = 0;
         boolean hasStartLabel = false;
-        StringBuilder content = new StringBuilder("");
-        if (getOpcode(firstLine).equals("START")) {
-            locCtr = Integer.parseInt(getOperand(firstLine), 16);
+        StringBuilder objectProgram = new StringBuilder("");
+        if (getOpcode(firstLine, true).equals("START")) {
+            locCtr = Integer.parseInt(getOperand(firstLine, true), 16);
             hasStartLabel = true;
             String loc = Integer.toHexString(locCtr).toUpperCase();
-            content.append(writeHeaderRecord(getLabel(firstLine), loc, getOperand(lastLine)));
+            objectProgram.append(writeHeaderRecord(getLabel(firstLine, true), loc, getOperand(lastLine, true)));
         }
         int startingAddress = locCtr;
-
+        StringBuilder content = new StringBuilder("");
         for (int i = 0; i < intermediateFile.size(); i++) {
             String[] line = intermediateFile.get(i).trim().split("\\s+");
 
@@ -213,16 +237,16 @@ public class Assembler {
                 continue;
             }
 
-            if (hasLabel(line)) {
-                String label = getLabel(line);
+            if (hasLabel(line, true)) {
+                String label = getLabel(line, true);
                 if (symTab.containsKey(label)) {
-                    setErrorFlag("duplicate symbol");
+                    // setErrorFlag("duplicate symbol");
                 } else {
                     symTab.put(label, locCtr);
                 }
             }
 
-            String opCode = getOpcode(line);
+            String opCode = getOpcode(line, true);
             if (opCode.equals("END")) {
                 String programLength = Integer.toHexString(locCtr - startingAddress).toUpperCase();
                 content.append("program length:" + programLength);
@@ -234,13 +258,13 @@ public class Assembler {
             } else if (opCode.equals("WORD")) {
                 locCtr += 3;
             } else if (opCode.equals("RESW")) {
-                int operand = Integer.parseInt(getOperand(line));
+                int operand = Integer.parseInt(getOperand(line, true));
                 locCtr += 3 * operand;
             } else if (opCode.equals("RESB")) {
-                int operand = Integer.parseInt(getOperand(line));
+                int operand = Integer.parseInt(getOperand(line, true));
                 locCtr += operand;
             } else if (opCode.equals("BYTE")) {
-                String operand = getOperand(line);
+                String operand = getOperand(line, true);
                 int chLen = operand.length() - 3;
 
                 if (operand.charAt(0) == 'C') {
@@ -254,5 +278,7 @@ public class Assembler {
 
             content.append(loc + "\t" + intermediateFile.get(i) + '\n');
         }
+        FileManage.save("objectProgram.txt", objectProgram.toString());
+        FileManage.save("listingFile.txt", content.toString());
     }
 }

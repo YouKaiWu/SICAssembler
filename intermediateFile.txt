@@ -1,4 +1,3 @@
-Loc	Source statement
 1000	COPY 	START	 1000 		
 1000	FIRST 	STL	 RETADR 	
 1003	CLOOP 	JSUB	 RDREC 		 
@@ -49,4 +48,4 @@ Loc	Source statement
 2073		JLT 	 WLOOP 		 
 2076		RSUB 			 
 2079	OUTPUT 	BYTE 	 X'05' 		 
-program length: 107A
+program length:107A
