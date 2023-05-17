@@ -119,8 +119,11 @@ public class Assembler {
                 return line[2];
             }
         }
-        if (hasLoc)
+        if (hasLoc){
+            if(line.length == 2)
+                return "";
             return line[2];
+        }
         return line[1];
     }
 
@@ -236,8 +239,8 @@ public class Assembler {
     }
 
     public static void writeTextLine() {
-        String length = Integer.toHexString(curTextLine.length());
-        textRecord.append(textHead + length + curTextLine);
+        String length = Integer.toHexString(curTextLine.length() / 2).toUpperCase();
+        textRecord.append(textHead + length + curTextLine + "\n");
     }
 
     public static void addObjectCode(String objectCode) {
@@ -252,8 +255,7 @@ public class Assembler {
         if (getOpcode(firstLine, true).equals("START")) {
             hasStartLabel = true;
             String startingAddress = firstLine[0];
-            objectProgram
-                    .append(writeHeaderRecord(getLabel(firstLine, true), startingAddress, getOperand(lastLine, false)));
+            objectProgram.append(writeHeaderRecord(getLabel(firstLine, true), startingAddress, getOperand(lastLine, false)));
         }
         StringBuilder content = new StringBuilder("");
         for (int i = 0; i < intermediateFile.size(); i++) {
@@ -264,7 +266,7 @@ public class Assembler {
                 continue;
             }
             String opCode = getOpcode(line, true);
-            if (opCode.equals("END")) {
+            if (i == intermediateFile.size() - 1) { // lastLine 
                 objectProgram.append(textRecord);
                 continue;
             }
