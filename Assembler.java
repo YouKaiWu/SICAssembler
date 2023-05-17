@@ -209,6 +209,11 @@ public class Assembler {
         return content;
     }
 
+    public static StringBuilder writeTextRecord(){
+        StringBuilder content = new StringBuilder("");
+        return content;
+    }
+
     public static void passTwo(ArrayList<String> intermediateFile) {
         String[] firstLine = intermediateFile.get(0).trim().split("\\s+");
         String[] lastLine = intermediateFile.get(intermediateFile.size() - 1).trim().split("\\s+");
@@ -221,7 +226,6 @@ public class Assembler {
             String loc = Integer.toHexString(locCtr).toUpperCase();
             objectProgram.append(writeHeaderRecord(getLabel(firstLine, true), loc, getOperand(lastLine, false)));
         }
-        int startingAddress = locCtr;
         StringBuilder content = new StringBuilder("");
         for (int i = 0; i < intermediateFile.size(); i++) {
             String[] line = intermediateFile.get(i).trim().split("\\s+");
@@ -230,53 +234,32 @@ public class Assembler {
                 content.append(intermediateFile.get(i) + '\n');
                 continue;
             }
-
-            String loc = Integer.toHexString(locCtr).toUpperCase();
-
-            if (hasStartLabel && i == 0) {
-                content.append(loc + "\t" + intermediateFile.get(i) + '\n');
-                continue;
-            }
-
-            if (hasLabel(line, true)) {
-                String label = getLabel(line, true);
-                if (symTab.containsKey(label)) {
-                    // setErrorFlag("duplicate symbol");
-                } else {
-                    symTab.put(label, locCtr);
-                }
-            }
-
             String opCode = getOpcode(line, true);
-            if (opCode.equals("END")) {
-                String programLength = Integer.toHexString(locCtr - startingAddress).toUpperCase();
-                content.append("program length:" + programLength);
-                continue;
-            }
 
-            if (opTab.containsKey(opCode)) {
-                locCtr += 3;
-            } else if (opCode.equals("WORD")) {
-                locCtr += 3;
-            } else if (opCode.equals("RESW")) {
-                int operand = Integer.parseInt(getOperand(line, true));
-                locCtr += 3 * operand;
-            } else if (opCode.equals("RESB")) {
-                int operand = Integer.parseInt(getOperand(line, true));
-                locCtr += operand;
-            } else if (opCode.equals("BYTE")) {
+            if(opTab.containsKey(opCode)){
                 String operand = getOperand(line, true);
-                int chLen = operand.length() - 3;
-
-                if (operand.charAt(0) == 'C') {
-                    locCtr += chLen;
-                } else if (operand.charAt(0) == 'X') {
-                    locCtr += chLen / 2;
+                int value;
+                if(operand != ""){
+                    if(symTab.containsKey(operand)){
+                        value = symTab.get(operand);
+                    }
+                    else{
+                        value = 0;
+                        setErrorFlag("undefined symbol");
+                    }
                 }
-            } else {
-                setErrorFlag("invalid operation code");
+                else{
+                    value = 0;
+                }
+                // TODO: 算 objectCode
             }
+            else if(opCode.equals("BYTE") || opCode.equals("WORD")){
+                // TODO: 算 objectCode
+            }
+            
 
+            
+            String loc = Integer.toHexString(locCtr).toUpperCase();
             content.append(loc + "\t" + intermediateFile.get(i) + '\n');
         }
         FileManage.save("objectProgram.txt", objectProgram.toString());
