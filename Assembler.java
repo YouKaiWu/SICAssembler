@@ -209,22 +209,51 @@ public class Assembler {
         return content;
     }
 
-    public static StringBuilder writeTextRecord(){
-        StringBuilder content = new StringBuilder("");
-        return content;
+    public static StringBuilder textRecord = new StringBuilder("");
+    public static String textHead = "";
+    public static String curTextLine = "";
+
+    public static void writeTextRecord(String objectCode, String loc) {
+        if (curTextLine.equals("")) {
+            intialTextRecord(loc);
+        } else if (!fit(curTextLine, objectCode, loc)) {
+            writeTextLine();
+            intialTextRecord(loc);
+        }
+        addObjectCode(objectCode);
+    }
+
+    public static boolean fit(String curTextLine, String objectCode, String loc) {
+        int locDif = Integer.parseInt(textHead.substring(1), 16) - Integer.parseInt(loc, 16);
+        if (curTextLine.length() + objectCode.length() > 60 || locDif > 30)
+            return false;
+        return true;
+    }
+
+    public static void intialTextRecord(String loc) {
+        textHead = "T" + loc;
+        curTextLine = "";
+    }
+
+    public static void writeTextLine() {
+        String length = Integer.toHexString(curTextLine.length());
+        textRecord.append(textHead + length + curTextLine);
+    }
+
+    public static void addObjectCode(String objectCode) {
+        curTextLine += objectCode;
     }
 
     public static void passTwo(ArrayList<String> intermediateFile) {
         String[] firstLine = intermediateFile.get(0).trim().split("\\s+");
         String[] lastLine = intermediateFile.get(intermediateFile.size() - 1).trim().split("\\s+");
-        int locCtr = 0;
         boolean hasStartLabel = false;
         StringBuilder objectProgram = new StringBuilder("");
         if (getOpcode(firstLine, true).equals("START")) {
-            locCtr = Integer.parseInt(getOperand(firstLine, true), 16);
             hasStartLabel = true;
-            String loc = Integer.toHexString(locCtr).toUpperCase();
-            objectProgram.append(writeHeaderRecord(getLabel(firstLine, true), loc, getOperand(lastLine, false)));
+            String startingAddress = firstLine[0];
+            objectProgram
+                    .append(writeHeaderRecord(getLabel(firstLine, true), startingAddress, getOperand(lastLine, false)));
         }
         StringBuilder content = new StringBuilder("");
         for (int i = 0; i < intermediateFile.size(); i++) {
@@ -235,32 +264,32 @@ public class Assembler {
                 continue;
             }
             String opCode = getOpcode(line, true);
-
-            if(opTab.containsKey(opCode)){
+            if (opCode.equals("END")) {
+                objectProgram.append(textRecord);
+                continue;
+            }
+            String objectCode = "";
+            if (opTab.containsKey(opCode)) {
                 String operand = getOperand(line, true);
                 int value;
-                if(operand != ""){
-                    if(symTab.containsKey(operand)){
+                if (operand != "") {
+                    if (symTab.containsKey(operand)) {
                         value = symTab.get(operand);
-                    }
-                    else{
+                    } else {
                         value = 0;
                         setErrorFlag("undefined symbol");
                     }
-                }
-                else{
+                } else {
                     value = 0;
                 }
                 // TODO: 算 objectCode
-            }
-            else if(opCode.equals("BYTE") || opCode.equals("WORD")){
+            } else if (opCode.equals("BYTE") || opCode.equals("WORD")) {
                 // TODO: 算 objectCode
             }
-            
-
-            
-            String loc = Integer.toHexString(locCtr).toUpperCase();
-            content.append(loc + "\t" + intermediateFile.get(i) + '\n');
+            objectCode = "123456";
+            String loc = line[0];
+            writeTextRecord(objectCode, loc);
+            content.append(intermediateFile.get(i) + "\t" + objectCode + '\n');
         }
         FileManage.save("objectProgram.txt", objectProgram.toString());
         FileManage.save("listingFile.txt", content.toString());
