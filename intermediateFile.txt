@@ -48,4 +48,5 @@
 2073		JLT 	 WLOOP 		 
 2076		RSUB 			 
 2079	OUTPUT 	BYTE 	 X'05' 		 
+        END 	 FIRST 	
 program length: 107A

@@ -3,7 +3,7 @@ import java.util.HashMap;
 
 public class Assembler {
 
-    static HashMap<String, Integer> symTab = new HashMap<>(); // key: symbol, value: locCtr
+    static HashMap<String, String> symTab = new HashMap<>(); // key: symbol, value: locCtr
     static HashMap<String, String> opTab = new HashMap<>() {
         {
 
@@ -119,8 +119,8 @@ public class Assembler {
                 return line[2];
             }
         }
-        if (hasLoc){
-            if(line.length == 2)
+        if (hasLoc) {
+            if (line.length == 2)
                 return "";
             return line[2];
         }
@@ -161,13 +161,14 @@ public class Assembler {
                 if (symTab.containsKey(label)) {
                     setErrorFlag("duplicate symbol");
                 } else {
-                    symTab.put(label, locCtr);
+                    symTab.put(label, loc);
                 }
             }
 
             String opCode = getOpcode(line, false);
             if (opCode.equals("END")) {
                 String programLength = Integer.toHexString(locCtr - startingAddress).toUpperCase();
+                content.append(sourceCode.get(i) + '\n');
                 content.append("program length: " + programLength);
                 continue;
             }
@@ -227,7 +228,7 @@ public class Assembler {
     }
 
     public static boolean fit(String curTextLine, String objectCode) {
-        if (curTextLine.length() + objectCode.length() > 60 || objectCode.equals("")) // TODO: 這裡要修
+        if (curTextLine.length() + objectCode.length() > 60 || objectCode.equals(""))
             return false;
         return true;
     }
@@ -246,15 +247,41 @@ public class Assembler {
         curTextLine += objectCode;
     }
 
+    public static String createObjectCode(String opCode, String operand) {
+        boolean indexed = false;
+        if (operand.contains(",")) {
+            String[] list = operand.split(",");
+            operand = list[0];
+            indexed = true;
+        }
+        String tmp = "";
+        if (operand != "") {
+            int operandAddress = Integer.parseInt(symTab.get(operand), 16);
+            int indexedsign = Integer.parseInt("8000", 16);
+            if (indexed)
+                tmp = Integer.toHexString(operandAddress + indexedsign);
+            else
+                tmp = Integer.toHexString(operandAddress);
+        } else {
+            tmp = "0000";
+        }
+        String objectCode = padWithZero(opTab.get(opCode) + tmp);
+        return objectCode;
+    }
+
+    public static String writeEndRecord(String startingAddress) {
+        return "E" + padWithZero(startingAddress);
+    }
+
     public static void passTwo(ArrayList<String> intermediateFile) {
         String[] firstLine = intermediateFile.get(0).trim().split("\\s+");
         String[] lastLine = intermediateFile.get(intermediateFile.size() - 1).trim().split("\\s+");
-        boolean hasStartLabel = false;
+        String startingAddress = "0";
         StringBuilder objectProgram = new StringBuilder("");
         if (getOpcode(firstLine, true).equals("START")) {
-            hasStartLabel = true;
-            String startingAddress = firstLine[0];
-            objectProgram.append(writeHeaderRecord(getLabel(firstLine, true), startingAddress, getOperand(lastLine, false)));
+            startingAddress = firstLine[0];
+            objectProgram
+                    .append(writeHeaderRecord(getLabel(firstLine, true), startingAddress, getOperand(lastLine, false)));
         }
         StringBuilder content = new StringBuilder("");
         for (int i = 0; i < intermediateFile.size(); i++) {
@@ -264,30 +291,41 @@ public class Assembler {
                 content.append(intermediateFile.get(i) + '\n');
                 continue;
             }
+
             String opCode = getOpcode(line, true);
-            if (i == intermediateFile.size() - 1) { // lastLine 
-                objectProgram.append(textRecord);
+
+            if (opCode.equals("START")) {
+                content.append(intermediateFile.get(i) + '\n');
                 continue;
             }
+            
+            if (getOpcode(line, false).equals("END")) {
+                writeTextLine();
+                objectProgram.append(textRecord);
+                String endRecord = writeEndRecord(startingAddress);
+                objectProgram.append(endRecord);
+                content.append(intermediateFile.get(i));
+                break;
+            }
+
             String objectCode = "";
             if (opTab.containsKey(opCode)) {
                 String operand = getOperand(line, true);
-                int value;
                 if (operand != "") {
-                    if (symTab.containsKey(operand)) {
-                        value = symTab.get(operand);
-                    } else {
-                        value = 0;
+                    if (!symTab.containsKey(operand)) {
                         setErrorFlag("undefined symbol");
                     }
-                } else {
-                    value = 0;
                 }
-                // TODO: 算 objectCode
-            } else if (opCode.equals("BYTE") || opCode.equals("WORD")) {
-                // TODO: 算 objectCode
+                objectCode = createObjectCode(opCode, operand);
+            } else if (opCode.equals("BYTE")) { // Todo: 剩這裡
+                objectCode = "454F46";
+            } else if (opCode.equals("WORD")) {
+                String operand = getOperand(line, true);
+                int size = Integer.parseInt(operand, 16);
+                objectCode = padWithZero(Integer.toHexString(size));
+            } else if (opCode.equals("RESB") || opCode.equals("RESW")) {
+                objectCode = "";
             }
-            objectCode = "123456";
             String loc = line[0];
             writeTextRecord(objectCode, loc);
             content.append(intermediateFile.get(i) + "\t" + objectCode + '\n');
