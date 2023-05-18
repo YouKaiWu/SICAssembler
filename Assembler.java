@@ -240,6 +240,7 @@ public class Assembler {
 
     public static void writeTextLine() {
         String length = Integer.toHexString(curTextLine.length() / 2).toUpperCase();
+        curTextLine = curTextLine.toUpperCase();
         textRecord.append(textHead + length + curTextLine + "\n");
     }
 
