@@ -234,7 +234,7 @@ public class Assembler {
     }
 
     public static void intialTextRecord(String loc) {
-        textHead = "T" + loc;
+        textHead = "T" + padWithZero(loc);
         curTextLine = "";
     }
 
