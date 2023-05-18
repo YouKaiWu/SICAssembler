@@ -284,7 +284,7 @@ public class Assembler {
             objectProgram
                     .append(writeHeaderRecord(getLabel(firstLine, true), startingAddress, getOperand(lastLine, false)));
         }
-        StringBuilder content = new StringBuilder("");
+        StringBuilder content = new StringBuilder("Loc" + "\t" + "Source statement" + "\t" + "Object code " + "\n");
         for (int i = 0; i < intermediateFile.size(); i++) {
             String[] line = intermediateFile.get(i).trim().split("\\s+");
 
@@ -299,7 +299,7 @@ public class Assembler {
                 content.append(intermediateFile.get(i) + '\n');
                 continue;
             }
-            
+
             if (getOpcode(line, false).equals("END")) {
                 writeTextLine();
                 objectProgram.append(textRecord);
@@ -313,16 +313,28 @@ public class Assembler {
             if (opTab.containsKey(opCode)) {
                 String operand = getOperand(line, true);
                 if (operand != "") {
+                    if (operand.contains(",")) {
+                        operand = operand.split(",")[0];
+                    }
                     if (!symTab.containsKey(operand)) {
                         setErrorFlag("undefined symbol");
                     }
                 }
                 objectCode = createObjectCode(opCode, operand);
-            } else if (opCode.equals("BYTE")) { // Todo: 剩這裡
-                objectCode = "454F46";
+            } else if (opCode.equals("BYTE")) {
+                String operand = getOperand(line, true);
+                String str = operand.split("\'")[1];
+                if (operand.charAt(0) == 'C') {
+                    for (int j = 0; j < str.length(); j++) {
+                        int asciiCode = str.charAt(j);
+                        objectCode += Integer.toHexString(asciiCode).toUpperCase();
+                    }
+                } else if (operand.charAt(0) == 'X') {
+                    objectCode = str;
+                }
             } else if (opCode.equals("WORD")) {
                 String operand = getOperand(line, true);
-                int size = Integer.parseInt(operand, 16);
+                int size = Integer.parseInt(operand);
                 objectCode = padWithZero(Integer.toHexString(size));
             } else if (opCode.equals("RESB") || opCode.equals("RESW")) {
                 objectCode = "";
