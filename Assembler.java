@@ -219,16 +219,15 @@ public class Assembler {
     public static void writeTextRecord(String objectCode, String loc) {
         if (curTextLine.equals("")) {
             intialTextRecord(loc);
-        } else if (!fit(curTextLine, objectCode, loc)) {
+        } else if (!fit(curTextLine, objectCode)) {
             writeTextLine();
             intialTextRecord(loc);
         }
         addObjectCode(objectCode);
     }
 
-    public static boolean fit(String curTextLine, String objectCode, String loc) {
-        int locDif = Integer.parseInt(textHead.substring(1), 16) - Integer.parseInt(loc, 16);
-        if (curTextLine.length() + objectCode.length() > 60 || locDif > 30)
+    public static boolean fit(String curTextLine, String objectCode) {
+        if (curTextLine.length() + objectCode.length() > 60 || objectCode.equals("")) // TODO: 這裡要修
             return false;
         return true;
     }
